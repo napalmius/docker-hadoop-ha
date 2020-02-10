@@ -15,12 +15,13 @@ if [ "`ls -A $namedir`" == "" ]; then
   echo "Formatting namenode name directory: $namedir"
   echo "$HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR namenode $PRE_RUN_ARGS -force"
   $HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR namenode $PRE_RUN_ARGS -force
+
+  echo "About to init zkfc $INIT_NODE"
+  if [ $INIT_NODE ]; then
+    $HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR zkfc -formatZK
+  fi
 fi
 
-echo "About to init zkfc $INIT_NODE"
-if [ $INIT_NODE ]; then
-  $HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR zkfc -formatZK
-fi
 
 $HADOOP_HOME/bin/hdfs --config $HADOOP_CONF_DIR --daemon start zkfc
 

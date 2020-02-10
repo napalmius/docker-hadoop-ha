@@ -11,7 +11,7 @@ services:
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
     environment:
-      - SERVICE_PRECONDITION=jn1:8480
+      - SERVICE_PRECONDITION=jn1:8480 zoo1:2181
       - CLUSTER_NAME=test
       - PRE_RUN_ARGS=-format
       - INIT_NODE=true
@@ -33,12 +33,23 @@ services:
     env_file:
       - ./hadoop.env
 
-  datanode:
+  datanode1:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: datanode
+    container_name: datanode1
     restart: always
     volumes:
-      - hadoop_datanode:/hadoop/dfs/data
+      - hadoop_datanode1:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 namenode-standby:9870"
+    env_file:
+      - ./hadoop.env
+
+  datanode2:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode2
+    restart: always
+    volumes:
+      - hadoop_datanode2:/hadoop/dfs/data
     environment:
       SERVICE_PRECONDITION: "namenode:9870 namenode-standby:9870"
     env_file:
@@ -52,6 +63,33 @@ services:
       - hadoop_zoo1:/zoo1
     ports:
       - 2181:2181
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+
+  zoo2:
+    image: zookeeper
+    container_name: zoo2
+    restart: always
+    volumes:
+      - hadoop_zoo2:/zoo2
+    ports:
+      - 2182:2181
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=0.0.0.0:2888:3888;2181 server.3=zoo3:2888:3888;2181
+
+  zoo3:
+    image: zookeeper
+    container_name: zoo3
+    restart: always
+    volumes:
+      - hadoop_zoo3:/zoo3
+    ports:
+      - 2183:2181
+    environment:
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=0.0.0.0:2888:3888;2181
 
   jn1:
     build: journalnode
@@ -61,40 +99,59 @@ services:
       - hadoop_jn1:/hadoop/jn1
     ports:
       - 8480:8480
-#
-#  resourcemanager:
-#    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
-#    container_name: resourcemanager
-#    restart: always
-#    environment:
-#      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
-#    env_file:
-#      - ./hadoop.env
-#
-#  nodemanager1:
-#    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
-#    container_name: nodemanager
-#    restart: always
-#    environment:
-#      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
-#    env_file:
-#      - ./hadoop.env
-#
-#  historyserver:
-#    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
-#    container_name: historyserver
-#    restart: always
-#    environment:
-#      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
-#    volumes:
-#      - hadoop_historyserver:/hadoop/yarn/timeline
-#    env_file:
-#      - ./hadoop.env
+
+  jn2:
+    build: journalnode
+    container_name: jn2
+    restart: always
+    volumes:
+      - hadoop_jn2:/hadoop/jn2
+
+  jn3:
+    build: journalnode
+    container_name: jn3
+    restart: always
+    volumes:
+      - hadoop_jn3:/hadoop/jn3
+
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+    container_name: resourcemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 datanode2:9864"
+    env_file:
+      - ./hadoop.env
+
+  nodemanager1:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 datanode2:9864 resourcemanager:8088"
+    env_file:
+      - ./hadoop.env
+
+  historyserver:
+    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+    container_name: historyserver
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 datanode2:9864 resourcemanager:8088"
+    volumes:
+      - hadoop_historyserver:/hadoop/yarn/timeline
+    env_file:
+      - ./hadoop.env
 
 volumes:
   hadoop_namenode:
   hadoop_namenode_standby:
-  hadoop_datanode:
+  hadoop_datanode1:
+  hadoop_datanode2:
   hadoop_jn1:
+  hadoop_jn2:
+  hadoop_jn3:
   hadoop_zoo1:
-#  hadoop_historyserver:
+  hadoop_zoo2:
+  hadoop_zoo3:
+  hadoop_historyserver:
