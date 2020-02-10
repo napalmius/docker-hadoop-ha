@@ -1,0 +1,100 @@
+version: "3"
+
+services:
+  namenode:
+    build: namenode
+    container_name: namenode
+    restart: always
+    ports:
+      - 9870:9870
+      - 9000:9000
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    environment:
+      - SERVICE_PRECONDITION=jn1:8480
+      - CLUSTER_NAME=test
+      - PRE_RUN_ARGS=-format
+      - INIT_NODE=true
+    env_file:
+      - ./hadoop.env
+
+  namenode-standby:
+    build: namenode
+    container_name: namenode-standby
+    restart: always
+    ports:
+      - 9871:9870
+    volumes:
+      - hadoop_namenode_standby:/hadoop/dfs/name-sb
+    environment:
+      - CLUSTER_NAME=test
+      - SERVICE_PRECONDITION=jn1:8480 namenode:9870
+      - PRE_RUN_ARGS=-bootstrapStandby
+    env_file:
+      - ./hadoop.env
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    restart: always
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 namenode-standby:9870"
+    env_file:
+      - ./hadoop.env
+
+  zoo1:
+    image: zookeeper
+    container_name: zoo1
+    restart: always
+    volumes:
+      - hadoop_zoo1:/zoo1
+    ports:
+      - 2181:2181
+
+  jn1:
+    build: journalnode
+    container_name: jn1
+    restart: always
+    volumes:
+      - hadoop_jn1:/hadoop/jn1
+    ports:
+      - 8480:8480
+#
+#  resourcemanager:
+#    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop3.2.1-java8
+#    container_name: resourcemanager
+#    restart: always
+#    environment:
+#      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864"
+#    env_file:
+#      - ./hadoop.env
+#
+#  nodemanager1:
+#    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+#    container_name: nodemanager
+#    restart: always
+#    environment:
+#      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+#    env_file:
+#      - ./hadoop.env
+#
+#  historyserver:
+#    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+#    container_name: historyserver
+#    restart: always
+#    environment:
+#      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+#    volumes:
+#      - hadoop_historyserver:/hadoop/yarn/timeline
+#    env_file:
+#      - ./hadoop.env
+
+volumes:
+  hadoop_namenode:
+  hadoop_namenode_standby:
+  hadoop_datanode:
+  hadoop_jn1:
+  hadoop_zoo1:
+#  hadoop_historyserver:
